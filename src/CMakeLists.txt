@@ -20,6 +20,8 @@ include_directories(${OPENCV_INCLUDE_DIRS})
 # Define header and source files
 set(HEADERS
     Eigen.h
+	common_types.h
+	hash.h
 )
 
 set(SOURCES

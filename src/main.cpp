@@ -4,6 +4,8 @@
 
 #include "Eigen.h"
 #include "common_types.h"
+#include "rectify.h"
+
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -44,7 +46,24 @@ int main()
 	Mat imgL = images[fcidl];
 	Mat imgR = images[fcidr];
 	Mat rectL, rectR;
-	rectifyImages(imgL, imgR, rectL, rectR);
+	//rectifyImages(imgL, imgR, rectL, rectR);
+
+	//Camera parameters
+	cv::Mat cameraMatrix0 = cv::Mat::zeros(3, 3, CV_64F);
+	cv::Mat cameraMatrix1 = cv::Mat::zeros(3, 3, CV_64F);
+	double doffs; double baseline;
+	int width; int height;
+	int ndisp; int isint; int vmin; int vmax;
+	double dyavg; double dymax;
+
+	std::string cameraParamDir = "Motorcycle-imperfect/calib.txt";//Change this line to the directory of the txt file
+	readCameraCalib(cameraParamDir, cameraMatrix0, cameraMatrix1, doffs, baseline, width, height, ndisp, isint, vmin, vmax, dyavg, dymax);
+
+	//Rectify images shoud work without any issue 
+	rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
+	//visualization of rectified images
+	visualizeRectified(rectL, rectR, width, height);
+
 	Mat disp_map = computeDisparityMap(rectL, rectR);
 	return 0;
 }

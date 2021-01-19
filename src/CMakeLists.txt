@@ -22,6 +22,8 @@ set(HEADERS
     Eigen.h
 	common_types.h
 	hash.h
+	rectify.h
+	disparity.h
 )
 
 set(SOURCES

@@ -31,7 +31,7 @@ void displayDispMap(Mat disp_map);
 
 // Constants
 
-const std::string dataset_path = "../data/Motorcycle-perfect";
+const std::string dataset_path = "../data/Motorcycle-imperfect";
 
 // Variables
 
@@ -41,7 +41,7 @@ std::unordered_map<FrameCamId, cv::Mat> images;
 int main() 
 {
 	read_images();
-	// display_images();
+	//display_images();
 	FrameCamId fcidl(0, 0);
 	FrameCamId fcidr(0, 1);
 	Mat imgL = images[fcidl];
@@ -56,9 +56,8 @@ int main()
 	int ndisp; int isint; int vmin; int vmax;
 	double dyavg; double dymax;
 
-	std::string cameraParamDir = "../data/Motorcycle-perfect/calib.txt";//Change this line to the directory of the txt file
+	std::string cameraParamDir = "../data/Motorcycle-imperfect/calib.txt";//Change this line to the directory of the txt file
 	readCameraCalib(cameraParamDir, cameraMatrix0, cameraMatrix1, doffs, baseline, width, height, ndisp, isint, vmin, vmax, dyavg, dymax);
-
 	//Rectify images shoud work without any issue 
 	rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
 	//visualization of rectified images

@@ -62,7 +62,7 @@ int main()
 	//Rectify images shoud work without any issue 
 	rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
 	//visualization of rectified images
-	visualizeRectified(rectL, rectR, width, height);
+	// visualizeRectified(rectL, rectR, width, height);
 	Mat disp_map = computeDisparityMap(rectL, rectR);
 	return 0;
 }

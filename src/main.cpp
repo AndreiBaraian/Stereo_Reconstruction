@@ -26,6 +26,8 @@ using namespace stereo_vis;
 
 void read_images();
 void display_images();
+Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs);
+void writeDepthMap(Mat depth_map);
 
 // Constants
 
@@ -60,8 +62,10 @@ int main()
 	//Rectify images shoud work without any issue 
 	rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
 	//visualization of rectified images
-	// visualizeRectified(rectL, rectR, width, height);
+	visualizeRectified(rectL, rectR, width, height);
 	Mat disp_map = computeDisparityMap(rectL, rectR);
+	Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
+	writeDepthMap(_3DImage);
 	return 0;
 }
 
@@ -94,4 +98,35 @@ void display_images()
 		imshow(ss.str(), kv.second);
 	}
 	waitKey(0);
+}
+
+Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs)
+{
+	Mat depthMap = disp_map.clone();
+	for(int i=0;i<depthMap.rows;i++)
+		for (int j = 0; j < depthMap.cols; j++)
+		{
+			depthMap.at<short>(i, j) = baseline * cam_m.at<double>(0, 0) / (depthMap.at<short>(i, j) + doffs);
+		}
+	return depthMap;
+}
+
+void writeDepthMap(Mat depthMap)
+{
+	std::ofstream outFile("moto.ply");
+	
+	outFile << "ply" << std::endl;
+	outFile << "format ascii 1.0" << std::endl;
+	outFile << "element vertex " << depthMap.rows * depthMap.cols << std::endl;
+	outFile << "property float x" << std::endl;
+	outFile << "property float y" << std::endl;
+	outFile << "property float z" << std::endl;
+	outFile << "end_header" << std::endl;
+
+	for(int i=0;i<depthMap.rows;i++)
+		for (int j = 0; j < depthMap.cols; j++)
+		{
+			outFile << i << " " << j << " " << depthMap.at<short>(i,j) << std::endl;
+		}
+	outFile.close();
 }

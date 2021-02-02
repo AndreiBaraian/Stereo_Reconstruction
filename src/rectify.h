@@ -130,6 +130,7 @@ cv::Mat rectifyImages(cv::Mat img0, cv::Mat img1, cv::Mat& recImg0, cv::Mat& rec
 
 void visualizeRectified(cv::Mat recImg0, cv::Mat recImg1, int width, int height)
 {
+    /*
     cv::Mat canvas;
     double sf;
     int w, h;
@@ -138,17 +139,19 @@ void visualizeRectified(cv::Mat recImg0, cv::Mat recImg1, int width, int height)
     w = cvRound(width * sf);
     h = cvRound(height * sf);
     canvas.create(h, 2 * w, CV_8UC3);
-
+    
     cv::Mat canvasPart0 = canvas(cv::Rect(0, 0, w, h));
     cv::Mat canvasPart1 = canvas(cv::Rect(w, 0, w, h));
     resize(recImg0, canvasPart0, canvasPart0.size(), 0, 0, cv::INTER_AREA);
     resize(recImg1, canvasPart1, canvasPart1.size(), 0, 0, cv::INTER_AREA);
-
-    for (int i = 0; i < canvas.rows; i += 8)
+    */
+    cv::Mat concat_img;
+    hconcat(recImg0, recImg1, concat_img);
+    for (int i = 0; i < concat_img.rows; i += 64)//Change 64 to another value to change the total number of lines
     {
-        line(canvas, cv::Point(0, i), cv::Point(canvas.cols, i), cv::Scalar(0, 255, 0), 1, cv::LINE_4);
+        line(concat_img, cv::Point(0, i), cv::Point(concat_img.cols, i), cv::Scalar(0, 255, 0), 8, cv::LINE_4);//Change 8 to another value to change the thickness of the lines
     }
     cv::namedWindow("Display frame", cv::WINDOW_FREERATIO);
-    imshow("Display frame", canvas);
-    cv::waitKey();
+    imshow("Display frame", concat_img);
+    cv::waitKey(0);
 }

@@ -53,8 +53,37 @@ Mat computeDisparityMap(Mat rect1, Mat rect2)
 
 	sbm->compute(rect1, rect2, disp_map);
 
-	displayDispMap(disp_map);
+//	displayDispMap(disp_map);
 
 	return disp_map;
 }
+
+Mat filterDispMap(Mat rect1, Mat rect2)
+{
+    Mat disp_map_l = Mat(rect1.rows, rect2.cols, CV_16S);
+    Mat disp_map_r = Mat(rect1.rows, rect2.cols, CV_16S);
+
+    int ndisparities = 256;
+    int SADWindowSize = 15;
+
+    Ptr<StereoBM> left_sbm = StereoBM::create(ndisparities, SADWindowSize);
+
+    //for filtering
+    Mat filter_disp_map = Mat(rect1.rows, rect2.cols, CV_16S);
+    auto wls_filter = cv::ximgproc::createDisparityWLSFilter(left_sbm);
+    Ptr<StereoMatcher> right_sbm = cv::ximgproc::createRightMatcher(left_sbm);
+
+    left_sbm-> compute(rect1, rect2,disp_map_l);
+    right_sbm->compute(rect2,rect1, disp_map_r);
+
+//    displayDispMap(disp_map_r);
+    //right disp map is all black needs a fix
+
+    wls_filter->filter(disp_map_l,rect1,filter_disp_map, disp_map_r) ;
+
+//    displayDispMap(filter_disp_map);
+
+    return filter_disp_map;
+}
+
 

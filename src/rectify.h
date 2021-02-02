@@ -102,7 +102,7 @@ void readCameraCalib(std::string filename, cv::Mat& cameraMatrix0, cv::Mat& came
     }
 }
 
-void rectifyImages(cv::Mat img0, cv::Mat img1, cv::Mat& recImg0, cv::Mat& recImg1, cv::Mat cameraMatrix0, cv::Mat cameraMatrix1, double& baseline, int& width, int& height)
+cv::Mat rectifyImages(cv::Mat img0, cv::Mat img1, cv::Mat& recImg0, cv::Mat& recImg1, cv::Mat cameraMatrix0, cv::Mat cameraMatrix1, double& baseline, int& width, int& height)
 {
     cv::Mat T = cv::Mat::zeros(3, 1, CV_64F);
     T.at<double>(1, 0) = baseline * cameraMatrix0.at<double>(0, 0);
@@ -124,6 +124,8 @@ void rectifyImages(cv::Mat img0, cv::Mat img1, cv::Mat& recImg0, cv::Mat& recImg
 
     remap(img0, recImg0, recMap[0][0], recMap[0][1], cv::INTER_LINEAR);
     remap(img1, recImg1, recMap[1][0], recMap[1][1], cv::INTER_LINEAR);
+
+    return Q;
 }
 
 void visualizeRectified(cv::Mat recImg0, cv::Mat recImg1, int width, int height)

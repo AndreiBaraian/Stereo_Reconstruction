@@ -28,9 +28,11 @@ void read_images();
 void display_images();
 Mat computeDisparityMap(Mat rect1, Mat rect2);
 void displayDispMap(Mat disp_map);
+Mat filterDispMap(Mat rect1, Mat rect2);
 
 // Constants
 
+//const std::string dataset_path = "/home/abhishek/Stereo_Reconstruction/data/Motorcycle-perfect";
 const std::string dataset_path = "../data/Motorcycle-perfect";
 
 // Variables
@@ -41,7 +43,7 @@ std::unordered_map<FrameCamId, cv::Mat> images;
 int main() 
 {
 	read_images();
-	// display_images();
+//	 display_images();
 	FrameCamId fcidl(0, 0);
 	FrameCamId fcidr(0, 1);
 	Mat imgL = images[fcidl];
@@ -55,15 +57,37 @@ int main()
 	int width; int height;
 	int ndisp; int isint; int vmin; int vmax;
 	double dyavg; double dymax;
-
+//
 	std::string cameraParamDir = "../data/Motorcycle-perfect/calib.txt";//Change this line to the directory of the txt file
 	readCameraCalib(cameraParamDir, cameraMatrix0, cameraMatrix1, doffs, baseline, width, height, ndisp, isint, vmin, vmax, dyavg, dymax);
-
-	//Rectify images shoud work without any issue 
-	rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
-	//visualization of rectified images
-	visualizeRectified(rectL, rectR, width, height);
+//
+	//Rectify images shoud work without any issue
+	Mat Q; //for disparity to depth conversion
+	Q = rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
+//	//visualization of rectified images
+//	visualizeRectified(rectL, rectR, width, height);
 	Mat disp_map = computeDisparityMap(rectL, rectR);
+//    disp_map = filterDispMap(rectL, rectR);
+
+    Mat points;
+    Mat points1;
+//    reprojectImageTo3D(disp_map/16.0, points, Q, true);
+    disp_map.convertTo(disp_map,CV_32F);
+    reprojectImageTo3D(disp_map/16.0, points, Q, false, CV_32F);
+
+    std::ofstream point_cloud_file;
+    point_cloud_file.open ("point_cloud.xyz");
+    for(int i = 0; i < points.rows; i++) {
+        for(int j = 0; j < points.cols; j++) {
+            Vec3f point = points.at<Vec3f>(i,j);
+             {
+                point_cloud_file << point[0] << " " << point[1] << " " << point[2]
+                                 << " " << static_cast<unsigned>(rectL.at<uchar>(i,j)) << " " << static_cast<unsigned>(rectL.at<uchar>(i,j)) << " " << static_cast<unsigned>(rectL.at<uchar>(i,j)) << std::endl;
+            }
+        }
+    }
+    point_cloud_file.close();
+
 	return 0;
 }
 

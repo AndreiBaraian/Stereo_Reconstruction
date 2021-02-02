@@ -23,8 +23,8 @@ set(HEADERS
 	common_types.h
 	hash.h
 	rectify.h
-	disparity.h
-)
+        disparity.h
+		)
 
 set(SOURCES
     main.cpp

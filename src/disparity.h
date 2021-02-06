@@ -23,33 +23,35 @@ void displayDispMap(Mat disp_map)
 	h = cvRound(h * ratio);
 	namedWindow("disparity map", WINDOW_NORMAL);
 	resizeWindow("disparity map", w, h);
-	cv::ximgproc::getDisparityVis(disp_map, result);
+	
+	/*
+	if (disp_map.type() == CV_16S)
+	{
+		disp_map.convertTo(disp_map, CV_32F, 1.0 / 16.0, 0.0);
+	}
+	*/
+
+	normalize(disp_map, result, 0, 256, NORM_MINMAX, CV_8U);
+	// result.convertTo(temp, CV_8U);
+	// cv::ximgproc::getDisparityVis(disp_map, result);
 	imshow("disparity map", result);
 	waitKey(0);
 }
 
 Mat computeDisparityMap(Mat rect1, Mat rect2)
 {
-	Mat disp_map = Mat(rect1.rows, rect2.cols, CV_16S);
+	Mat disp_map;
 
-	int ndisparities = 256;
+	int ndisparities = 288;
 	int SADWindowSize = 15;
 
 	Ptr<StereoBM> sbm = StereoBM::create(ndisparities, SADWindowSize);
-	/*
-	sbm->setPreFilterCap(32);
-	sbm->setBlockSize(SADWindowSize);
-	int cn = rect1.channels();
-	sbm->setP1(8 * cn * SADWindowSize * SADWindowSize);
-	sbm->setP2(32 * cn * SADWindowSize * SADWindowSize);
-	sbm->setMinDisparity(0);
-	sbm->setNumDisparities(128);
-	sbm->setUniquenessRatio(10);
-	sbm->setSpeckleWindowSize(100);
-	sbm->setSpeckleRange(32);
-	sbm->setDisp12MaxDiff(1);
-	sbm->setMode(StereoSGBM::MODE_HH);
-	*/
+
+	//sbm->setP1(8 * cn * SADWindowSize * SADWindowSize);
+	//sbm->setP2(32 * cn * SADWindowSize * SADWindowSize);
+
+	//sbm->setMode(StereoSGBM::MODE_HH);
+	
 
 	sbm->compute(rect1, rect2, disp_map);
 

@@ -27,7 +27,7 @@ using namespace stereo_vis;
 void read_images();
 void display_images();
 Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs);
-void writeDepthMap(Mat depth_map);
+void writeDepthMap(Mat depth_map, Mat P);
 void display_gt(double baseline, double doffs, Mat calib);
 
 // Constants
@@ -80,7 +80,7 @@ void display_gt(double baseline, double doffs, Mat calib_cam)
 	ss << dataset_path << "/disp0.pfm";
 	Mat img_gt = imread(ss.str(), IMREAD_UNCHANGED);
 	Mat depth_map = computeDepthMap(img_gt, baseline, calib_cam, doffs);
-	writeDepthMap(depth_map);
+	writeDepthMap(depth_map, calib_cam);
 }
 
 void read_images()
@@ -117,16 +117,18 @@ void display_images()
 Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs)
 {
 	Mat depthMap = Mat(disp_map.rows, disp_map.cols, CV_32F);
+
 	for(int i=0;i<depthMap.rows;i++)
 		for (int j = 0; j < depthMap.cols; j++)
 		{
-			depthMap.at<float>(i, j) = baseline * cam_m.at<double>(0, 0) / (disp_map.at<float>(i, j) + doffs);
+			float depth = baseline * cam_m.at<double>(0, 0) / (disp_map.at<float>(i, j) + doffs);
+			depthMap.at<float>(i, j) = depth;
 		}
 
 	return depthMap;
 }
 
-void writeDepthMap(Mat depthMap)
+void writeDepthMap(Mat depthMap, Mat P)
 {
 	std::ofstream outFile("moto.ply");
 	outFile << "ply" << std::endl;
@@ -141,7 +143,11 @@ void writeDepthMap(Mat depthMap)
 	for(int i=0;i<depthMap.rows;i++)
 		for (int j = 0; j < depthMap.cols; j++)
 		{
-				outFile << i << " " << j << " " << depthMap.at<float>(i, j) << std::endl;
+			float x = i / P.at<double>(0, 0) - j * P.at<double>(0, 1) / (P.at<double>(0, 0)*P.at<double>(1, 1)) +
+				(P.at<double>(0, 1)*P.at<double>(1, 2) - P.at<double>(1, 1)*P.at<double>(0, 2)) /
+				(P.at<double>(0, 0)*P.at<double>(1, 1)*P.at<double>(2, 2));
+			float y = j / P.at<double>(1, 1) - P.at<double>(1, 2) / (P.at<double>(2, 2)*P.at<double>(1, 1));
+			outFile << x << " " << y << " " << depthMap.at<float>(i, j) << std::endl;
 		}
 	outFile.close();
 }

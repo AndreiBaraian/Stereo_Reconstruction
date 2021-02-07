@@ -37,7 +37,7 @@ const std::string dataset_path = "../data/Motorcycle-perfect";
 // Variables
 
 std::unordered_map<FrameCamId, cv::Mat> images;
-const bool use_provided_disparity = true;
+const bool use_provided_disparity = false;
 
 int main() 
 {
@@ -73,8 +73,7 @@ int main()
 		// visualizeRectified(rectL, rectR, width, height);
 		Mat disp_map = computeDisparityMap(imgL, imgR);
 		Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
-		std::cout << disp_map.rows << std::endl;
-		writeDepthMap(disp_map);
+		writeDepthMap(_3DImage);
 		return 0;
 	}
 
@@ -150,7 +149,7 @@ Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs)
 	if (disp_map.type() == CV_16S)
 	{
 		type_changed = true;
-		disp_map.convertTo(floatDisp, CV_32F, 1.0f / 16.0);
+		disp_map.convertTo(floatDisp, CV_32F);
 	}
 	
 	if (type_changed)

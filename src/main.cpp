@@ -37,7 +37,7 @@ const std::string dataset_path = "../data/Motorcycle-perfect";
 // Variables
 
 std::unordered_map<FrameCamId, cv::Mat> images;
-
+const bool use_provided_disparity = true;
 
 int main() 
 {
@@ -59,17 +59,25 @@ int main()
 
 	std::string cameraParamDir = "../data/Motorcycle-perfect/calib.txt";//Change this line to the directory of the txt file
 	readCameraCalib(cameraParamDir, cameraMatrix0, cameraMatrix1, doffs, baseline, width, height, ndisp, isint, vmin, vmax, dyavg, dymax);
-	display_gt(baseline, doffs, cameraMatrix0);
-	return 0;
-	
-	//Rectify images shoud work without any issue 
-	// rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
-	//visualization of rectified images
-	// visualizeRectified(rectL, rectR, width, height);
-	Mat disp_map = computeDisparityMap(imgL, imgR);
-	Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
-	writeDepthMap(_3DImage);
-	return 0;
+
+	if(use_provided_disparity)
+	{
+		display_gt(baseline, doffs, cameraMatrix0);
+		return 0;
+	}
+	else
+	{
+		//Rectify images shoud work without any issue 
+		rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
+		//visualization of rectified images
+		// visualizeRectified(rectL, rectR, width, height);
+		Mat disp_map = computeDisparityMap(imgL, imgR);
+		Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
+		std::cout << disp_map.rows << std::endl;
+		writeDepthMap(disp_map);
+		return 0;
+	}
+
 	
 }
 
@@ -79,6 +87,7 @@ void display_gt(double baseline, double doffs, Mat calib_cam)
 	std::stringstream ss;
 	ss << dataset_path << "/disp0.pfm";
 	Mat img_gt = imread(ss.str(), IMREAD_UNCHANGED);
+	img_gt.setTo(0, img_gt == INFINITY);
 	displayDispMap(img_gt);
 	Mat depth_map = computeDepthMap(img_gt, baseline, calib_cam, doffs);
 	writeDepthMap(depth_map);
@@ -143,6 +152,7 @@ Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs)
 		type_changed = true;
 		disp_map.convertTo(floatDisp, CV_32F, 1.0f / 16.0);
 	}
+	
 	if (type_changed)
 	{
 		reprojectImageTo3D(floatDisp, depthMap, Q);

@@ -59,8 +59,8 @@ int main()
 
 	std::string cameraParamDir = "../data/Motorcycle-perfect/calib.txt";//Change this line to the directory of the txt file
 	readCameraCalib(cameraParamDir, cameraMatrix0, cameraMatrix1, doffs, baseline, width, height, ndisp, isint, vmin, vmax, dyavg, dymax);
-	//display_gt(baseline, doffs, cameraMatrix0);
-	//return 0;
+	display_gt(baseline, doffs, cameraMatrix0);
+	return 0;
 	
 	//Rectify images shoud work without any issue 
 	// rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
@@ -118,7 +118,7 @@ void display_images()
 Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs)
 {
 	Mat depthMap;
-
+	bool type_changed = false;
 	cv::Mat Q(4,4, CV_64F);
 	Q.at<double>(0, 0) = 1.0;
 	Q.at<double>(0, 1) = 0.0;
@@ -140,10 +140,17 @@ Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs)
 	Mat floatDisp;
 	if (disp_map.type() == CV_16S)
 	{
+		type_changed = true;
 		disp_map.convertTo(floatDisp, CV_32F, 1.0f / 16.0);
 	}
-	
-	reprojectImageTo3D(floatDisp, depthMap, Q);
+	if (type_changed)
+	{
+		reprojectImageTo3D(floatDisp, depthMap, Q);
+	}
+	else
+	{
+		reprojectImageTo3D(disp_map, depthMap, Q);
+	}
 
 	return depthMap;
 }

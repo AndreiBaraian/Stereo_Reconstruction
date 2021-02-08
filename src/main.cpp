@@ -37,7 +37,7 @@ const std::string dataset_path = "../data/Motorcycle-perfect";
 // Variables
 
 std::unordered_map<FrameCamId, cv::Mat> images;
-const bool use_provided_disparity = false;
+const std::string current_mode ("SGBM");//currently implemented modes are "SGBM", "BM" and, "groundtruth"
 
 int main() 
 {
@@ -60,18 +60,35 @@ int main()
 	std::string cameraParamDir = "../data/Motorcycle-perfect/calib.txt";//Change this line to the directory of the txt file
 	readCameraCalib(cameraParamDir, cameraMatrix0, cameraMatrix1, doffs, baseline, width, height, ndisp, isint, vmin, vmax, dyavg, dymax);
 
-	if(use_provided_disparity)
+	if(current_mode.compare("groundtruth") == 0)
 	{
+		std::cout << "hello" << std::endl;
 		display_gt(baseline, doffs, cameraMatrix0);
 		return 0;
 	}
-	else
+	else if (current_mode.compare("BM") == 0)
 	{
 		//Rectify images shoud work without any issue 
 		rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
 		//visualization of rectified images
 		// visualizeRectified(rectL, rectR, width, height);
-		Mat disp_map = computeDisparityMap(imgL, imgR);
+		//Mat disp_map = computeDisparityMap(imgL, imgR);
+		Mat disp_map = computeDisparityMapBM(imgL, imgR);
+
+
+		Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
+		writeDepthMap(_3DImage);
+		return 0;
+	}
+
+	else if (current_mode.compare("SGBM") == 0)
+	{
+		//Rectify images shoud work without any issue 
+		rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
+		//visualization of rectified images
+		// visualizeRectified(rectL, rectR, width, height);
+		//Mat disp_map = computeDisparityMap(imgL, imgR);
+		Mat disp_map = computeDisparityMapSGBM(imgL, imgR);
 		Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
 		writeDepthMap(_3DImage);
 		return 0;
@@ -88,6 +105,7 @@ void display_gt(double baseline, double doffs, Mat calib_cam)
 	Mat img_gt = imread(ss.str(), IMREAD_UNCHANGED);
 	img_gt.setTo(0, img_gt == INFINITY);
 	displayDispMap(img_gt);
+	img_gt.setTo(INFINITY, img_gt == 0);
 	Mat depth_map = computeDepthMap(img_gt, baseline, calib_cam, doffs);
 	writeDepthMap(depth_map);
 }
@@ -126,7 +144,7 @@ void display_images()
 Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs)
 {
 	Mat depthMap;
-	bool type_changed = false;
+
 	cv::Mat Q(4,4, CV_64F);
 	Q.at<double>(0, 0) = 1.0;
 	Q.at<double>(0, 1) = 0.0;
@@ -145,22 +163,15 @@ Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs)
 	Q.at<double>(3, 2) = 1.0 / baseline;    //1.0/BaseLine
 	Q.at<double>(3, 3) = doffs;    //cx - cx'
 	
-	Mat floatDisp;
+	
 	if (disp_map.type() == CV_16S)
 	{
-		type_changed = true;
-		disp_map.convertTo(floatDisp, CV_32F);
-	}
-	
-	if (type_changed)
-	{
-		reprojectImageTo3D(floatDisp, depthMap, Q);
-	}
-	else
-	{
-		reprojectImageTo3D(disp_map, depthMap, Q);
+		disp_map.convertTo(disp_map, CV_32F, 16.0);
+		//disp_map.setTo(INFINITY, disp_map == 0.0);
 	}
 
+	reprojectImageTo3D(disp_map, depthMap, Q);
+	
 	return depthMap;
 }
 

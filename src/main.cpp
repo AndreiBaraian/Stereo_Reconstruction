@@ -37,7 +37,7 @@ const std::string dataset_path = "../data/Motorcycle-perfect";
 // Variables
 
 std::unordered_map<FrameCamId, cv::Mat> images;
-const std::string current_mode ("SGBM");//currently implemented modes are "SGBM", "BM" and, "groundtruth"
+const std::string current_mode ("BM");//currently implemented modes are "SGBM", "BM" and, "groundtruth"
 
 int main() 
 {
@@ -69,7 +69,7 @@ int main()
 	else if (current_mode.compare("BM") == 0)
 	{
 		//Rectify images shoud work without any issue 
-		rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
+		// rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
 		//visualization of rectified images
 		// visualizeRectified(rectL, rectR, width, height);
 		//Mat disp_map = computeDisparityMap(imgL, imgR);
@@ -93,10 +93,7 @@ int main()
 		writeDepthMap(_3DImage);
 		return 0;
 	}
-
-	
 }
-
 
 void display_gt(double baseline, double doffs, Mat calib_cam)
 {
@@ -104,8 +101,9 @@ void display_gt(double baseline, double doffs, Mat calib_cam)
 	ss << dataset_path << "/disp0.pfm";
 	Mat img_gt = imread(ss.str(), IMREAD_UNCHANGED);
 	img_gt.setTo(0, img_gt == INFINITY);
-	displayDispMap(img_gt);
+	// displayDispMap(img_gt);
 	img_gt.setTo(INFINITY, img_gt == 0);
+	// normalize(img_gt, img_gt, 0, 256, NORM_MINMAX, CV_8U);
 	Mat depth_map = computeDepthMap(img_gt, baseline, calib_cam, doffs);
 	writeDepthMap(depth_map);
 }
@@ -163,14 +161,15 @@ Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs)
 	Q.at<double>(3, 2) = 1.0 / baseline;    //1.0/BaseLine
 	Q.at<double>(3, 3) = doffs;    //cx - cx'
 	
-	
+	Q.convertTo(Q, CV_32F);
+
 	if (disp_map.type() == CV_16S)
 	{
 		disp_map.convertTo(disp_map, CV_32F, 16.0);
-		//disp_map.setTo(INFINITY, disp_map == 0.0);
+		disp_map.setTo(INFINITY, disp_map < 0);
 	}
 
-	reprojectImageTo3D(disp_map, depthMap, Q);
+	reprojectImageTo3D(disp_map, depthMap, Q, false, CV_32F);
 	
 	return depthMap;
 }
@@ -182,7 +181,7 @@ void writeDepthMap(Mat depthMap)
 		for (int j = 0; j < depthMap.cols; j++)
 		{
 			Vec3f point = depthMap.at<Vec3f>(i, j);
-			if (!isnan(point[0]))
+			if (!isnan(point[0]) && point[2] > 5)
 			{
 				valid++;
 			}
@@ -200,7 +199,7 @@ void writeDepthMap(Mat depthMap)
 		for (int j = 0; j < depthMap.cols; j++)
 		{
 			Vec3f point = depthMap.at<Vec3f>(i, j);
-			if (!isnan(point[0]))
+			if (!isnan(point[0]) && point[2] > 5)
 			{
 				outFile << point[0] << " " << point[1] << " " << point[2] << std::endl;
 			}

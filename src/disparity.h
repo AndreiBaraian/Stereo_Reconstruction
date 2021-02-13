@@ -43,15 +43,16 @@ Mat computeDisparityMapBM(Mat rect1, Mat rect2)
 	Mat disp_map;
 
 	int ndisparities = 288;
-	int SADWindowSize = 15;
+	int SADWindowSize = 21;
 
 	Ptr<StereoBM> sbm = StereoBM::create(ndisparities, SADWindowSize);
 
 	//sbm->setP1(8 * cn * SADWindowSize * SADWindowSize);
 	//sbm->setP2(32 * cn * SADWindowSize * SADWindowSize);
 
-	//sbm->setMode(StereoSGBM::MODE_HH);
-	
+	sbm->setSpeckleWindowSize(200);
+	sbm->setSpeckleRange(64);
+	sbm->setTextureThreshold(10);
 
 	sbm->compute(rect1, rect2, disp_map);
 

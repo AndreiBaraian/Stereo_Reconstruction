@@ -27,7 +27,7 @@ set(HEADERS
 		)
 
 set(SOURCES
-    main.cpp
+	main.cpp
 )
 
 set(APP_LIBS

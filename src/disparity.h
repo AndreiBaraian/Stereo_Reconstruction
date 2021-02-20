@@ -69,20 +69,20 @@ Mat computeDisparityMapSGBM(Mat rect1, Mat rect2)
 	int SADWindowSize = 250;
 
 	Ptr<StereoSGBM> left_matcher = StereoSGBM::create(ndisparities, SADWindowSize, 3, 8*9,32*9,0,0,5,50,1,StereoSGBM::MODE_SGBM);
-	//Ptr<ximgproc::DisparityWLSFilter>  wls_filter = ximgproc::createDisparityWLSFilter(left_matcher);
-	//Ptr<StereoMatcher> right_matcher = ximgproc::createRightMatcher(left_matcher);
-
-	//Mat right_disp,filtered_disp;
+//	Ptr<ximgproc::DisparityWLSFilter>  wls_filter = ximgproc::createDisparityWLSFilter(left_matcher);
+//	Ptr<StereoMatcher> right_matcher = ximgproc::createRightMatcher(left_matcher);
+//
+//	Mat right_disp,filtered_disp;
 
 	left_matcher->compute(rect1, rect2, left_disp);
-	//right_matcher->compute(rect2, rect1, right_disp);
+//	right_matcher->compute(rect2, rect1, right_disp);
+//
+//	wls_filter->setLambda(8000);
+//	wls_filter->setSigmaColor(3.0);
+//	wls_filter->filter(left_disp, rect1, filtered_disp, right_disp);
 
-	//wls_filter->setLambda(8000);
-	//wls_filter->setSigmaColor(3.0);
-	//wls_filter->filter(left_disp, rect1, filtered_disp, right_disp);
+//	displayDispMap(filtered_disp);
 
-	displayDispMap(left_disp);
-
-	return left_disp;
+	return filtered_disp;
 }
 

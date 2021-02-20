@@ -27,7 +27,7 @@ using namespace stereo_vis;
 void read_images();
 void display_images();
 Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs);
-void writeDepthMap(Mat depth_map);
+void writeDepthMap(Mat depth_map, Mat colors);
 void display_gt(double baseline, double doffs, Mat calib);
 
 // Constants
@@ -37,7 +37,7 @@ const std::string dataset_path = "../data/Motorcycle-perfect";
 // Variables
 
 std::unordered_map<FrameCamId, cv::Mat> images;
-const std::string current_mode ("BM");//currently implemented modes are "SGBM", "BM" and, "groundtruth"
+const std::string current_mode ("SGBM");//currently implemented modes are "SGBM", "BM" and, "groundtruth"
 
 int main() 
 {
@@ -48,6 +48,11 @@ int main()
 	Mat imgL = images[fcidl];
 	Mat imgR = images[fcidr];
 	Mat rectL, rectR;
+
+   //to get the colored image for colored mesh
+    std::stringstream ssl;
+    ssl << dataset_path << "/" << "im0" << ".png";
+    Mat img_color = imread(ssl.str(), IMREAD_COLOR);
 
 	//Camera parameters
 	cv::Mat cameraMatrix0 = cv::Mat::zeros(3, 3, CV_64F);
@@ -77,7 +82,10 @@ int main()
 
 
 		Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
-		writeDepthMap(_3DImage);
+		Mat colors;
+		cvtColor(img_color, colors, COLOR_BGR2RGB);
+//		std::cout<<"Colors : "<< colors.at<Vec3b>(0,0)  <<std::endl;
+		writeDepthMap(_3DImage, colors);
 		return 0;
 	}
 
@@ -90,7 +98,9 @@ int main()
 		//Mat disp_map = computeDisparityMap(imgL, imgR);
 		Mat disp_map = computeDisparityMapSGBM(imgL, imgR);
 		Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
-		writeDepthMap(_3DImage);
+		Mat colors;
+        cvtColor(img_color, colors, COLOR_BGR2RGB);
+		writeDepthMap(_3DImage, colors);
 		return 0;
 	}
 }
@@ -105,7 +115,9 @@ void display_gt(double baseline, double doffs, Mat calib_cam)
 	img_gt.setTo(INFINITY, img_gt == 0);
 	// normalize(img_gt, img_gt, 0, 256, NORM_MINMAX, CV_8U);
 	Mat depth_map = computeDepthMap(img_gt, baseline, calib_cam, doffs);
-	writeDepthMap(depth_map);
+	Mat colors;
+    cvtColor(img_gt, colors, COLOR_BGR2RGB);
+	writeDepthMap(depth_map, colors);
 }
 
 void read_images()
@@ -174,7 +186,7 @@ Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs)
 	return depthMap;
 }
 
-void writeDepthMap(Mat depthMap)
+void writeDepthMap(Mat depthMap, Mat colors)
 {
 	int valid = 0;
 	for (int i = 0; i < depthMap.rows; i++)
@@ -193,15 +205,19 @@ void writeDepthMap(Mat depthMap)
 	outFile << "property float x" << std::endl;
 	outFile << "property float y" << std::endl;
 	outFile << "property float z" << std::endl;
+	outFile << "property uchar red" << std::endl;
+    outFile << "property uchar green" << std::endl;
+    outFile << "property uchar blue" << std::endl;
 	outFile << "end_header" << std::endl;
 
 	for(int i=0;i<depthMap.rows;i++)
 		for (int j = 0; j < depthMap.cols; j++)
 		{
 			Vec3f point = depthMap.at<Vec3f>(i, j);
+			Vec3f color = colors.at<Vec3b>(i, j);
 			if (!isnan(point[0]) && point[2] > 5)
 			{
-				outFile << point[0] << " " << point[1] << " " << point[2] << std::endl;
+				outFile << point[0] << " " << point[1] << " " << point[2] << " " << color[0] << " " << color[1] << " " << color[2] << std::endl;
 			}
 		}
 	outFile.close();

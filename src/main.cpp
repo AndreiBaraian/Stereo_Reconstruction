@@ -37,7 +37,7 @@ const std::string dataset_path = "../data/Motorcycle-perfect";
 // Variables
 
 std::unordered_map<FrameCamId, cv::Mat> images;
-const std::string current_mode ("SGBM");//currently implemented modes are "SGBM", "BM" and, "groundtruth"
+const std::string current_mode ("ORB");//currently implemented modes are "SGBM", "BM" and, "groundtruth", "ORB"
 
 int main() 
 {
@@ -100,6 +100,22 @@ int main()
 		Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
 		Mat colors;
         cvtColor(img_color, colors, COLOR_BGR2RGB);
+		writeDepthMap(_3DImage, colors);
+		return 0;
+	}
+
+	else if (current_mode.compare("ORB") == 0)
+	{
+		//Rectify images shoud work without any issue 
+		rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
+		//visualization of rectified images
+		//visualizeRectified(rectL, rectR, width, height);
+		//Mat disp_map = computeDisparityMap(imgL, imgR);
+		Mat disp_map = computeDisparityMapORB(rectL, rectR, 400, 0);
+		imwrite("test_dips.png", disp_map);
+		Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
+		Mat colors;
+		cvtColor(img_color, colors, COLOR_BGR2RGB);
 		writeDepthMap(_3DImage, colors);
 		return 0;
 	}

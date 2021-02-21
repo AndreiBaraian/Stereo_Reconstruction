@@ -1,3 +1,0 @@
-/home/abhishek/Stereo_Reconstruction/src/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/abhishek/Stereo_Reconstruction/src/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/abhishek/Stereo_Reconstruction/src/cmake-build-debug/CMakeFiles/stereo_reconstruction.dir

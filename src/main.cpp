@@ -2,6 +2,7 @@
 #include <fstream>
 #include <unordered_map>
 #include <algorithm>
+#include <filesystem>
 
 #include "Eigen.h"
 #include "common_types.h"
@@ -22,6 +23,8 @@
 using namespace cv;
 using namespace stereo_vis;
 
+namespace fs = std::filesystem;
+
 // Declarations
 
 void read_images();
@@ -29,18 +32,21 @@ void display_images();
 Mat computeDepthMap(Mat disp_map, double baseline, Mat cam_m, double doffs);
 void writeDepthMap(Mat depth_map, Mat colors);
 void display_gt(double baseline, double doffs, Mat calib);
+void run_evaluation();
 
 // Constants
 
-const std::string dataset_path = "../data/Motorcycle-perfect";
+const std::string dataset_path = "../data/Middlebury/Motorcycle-perfect";
 
 // Variables
 
 std::unordered_map<FrameCamId, cv::Mat> images;
-const std::string current_mode ("ORB");//currently implemented modes are "SGBM", "BM" and, "groundtruth", "ORB"
+const std::string matcher_type("BM"); // BM or SGBM or ORB
 
 int main() 
 {
+	// run_evaluation();
+	// return 0;
 	read_images();
 	// display_images();
 	FrameCamId fcidl(0, 0);
@@ -62,15 +68,22 @@ int main()
 	int ndisp; int isint; int vmin; int vmax;
 	double dyavg; double dymax;
 
-	std::string cameraParamDir = "../data/Motorcycle-perfect/calib.txt";//Change this line to the directory of the txt file
+	std::string cameraParamDir = "../data/Middlebury/Motorcycle-perfect/calib.txt";//Change this line to the directory of the txt file
 	readCameraCalib(cameraParamDir, cameraMatrix0, cameraMatrix1, doffs, baseline, width, height, ndisp, isint, vmin, vmax, dyavg, dymax);
 
-	if(current_mode.compare("groundtruth") == 0)
-	{
-		std::cout << "hello" << std::endl;
-		display_gt(baseline, doffs, cameraMatrix0);
-		return 0;
-	}
+	// display_gt(baseline, doffs, cameraMatrix0);
+	
+	AbstractStereoMatcher* matcher = AbstractStereoMatcher::Create(matcher_type);
+
+	Mat disp_map = matcher->computeDisparityMap(imgL, imgR);
+	Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
+
+	Mat colors;
+	cvtColor(img_color, colors, COLOR_BGR2RGB);
+	writeDepthMap(_3DImage, colors);
+	return 0;
+	
+	/*
 	else if (current_mode.compare("BM") == 0)
 	{
 		//Rectify images shoud work without any issue 
@@ -103,7 +116,7 @@ int main()
 		writeDepthMap(_3DImage, colors);
 		return 0;
 	}
-
+	
 	else if (current_mode.compare("ORB") == 0)
 	{
 		//Rectify images shoud work without any issue 
@@ -118,7 +131,7 @@ int main()
 		cvtColor(img_color, colors, COLOR_BGR2RGB);
 		writeDepthMap(_3DImage, colors);
 		return 0;
-	}
+	}*/
 }
 
 void display_gt(double baseline, double doffs, Mat calib_cam)
@@ -237,4 +250,52 @@ void writeDepthMap(Mat depthMap, Mat colors)
 			}
 		}
 	outFile.close();
+}
+
+
+void run_evaluation()
+{
+	const std::string dataset_folder = "../data/Middlebury";
+	const std::string matcher_type = "BM";
+	int frame_id = 0;
+
+	// Camera parameters
+	cv::Mat cameraMatrix0 = cv::Mat::zeros(3, 3, CV_64F);
+	cv::Mat cameraMatrix1 = cv::Mat::zeros(3, 3, CV_64F);
+	double doffs; double baseline;
+	int width; int height;
+	int ndisp; int isint; int vmin; int vmax;
+	double dyavg; double dymax;
+
+	for (const auto& entry : fs::directory_iterator(dataset_folder))
+	{
+		std::cout << entry.path() << std::endl;
+		FrameCamId fcidl(frame_id, 0);
+		FrameCamId fcidr(frame_id, 1);
+
+		std::stringstream ssl;
+		ssl << entry.path().string() << "/" << "im0.png";
+
+		std::stringstream ssr;
+		ssr << entry.path().string() << "/" << "im1.png";
+
+		Mat imgl = imread(ssl.str(), IMREAD_GRAYSCALE);
+		Mat imgr = imread(ssr.str(), IMREAD_GRAYSCALE);
+		Mat img_color = imread(ssl.str(), IMREAD_COLOR);
+
+		images[fcidl] = imgl;
+		images[fcidr] = imgr;
+
+		// read camera parameters
+		std::stringstream cameraParamDir;
+		cameraParamDir << entry.path().string() << "/calib.txt";
+		readCameraCalib(cameraParamDir.str(), cameraMatrix0, cameraMatrix1, doffs, baseline, width, height, ndisp, isint, vmin, vmax, dyavg, dymax);
+
+		AbstractStereoMatcher* matcher = AbstractStereoMatcher::Create(matcher_type);
+		
+		Mat disp_map = matcher->computeDisparityMap(imgl, imgr);
+		
+
+		frame_id++;
+	}
 }

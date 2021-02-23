@@ -9,7 +9,7 @@ set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../libs CACHE PATH "Path to lib f
 set(Eigen3_INCLUDE_DIR ${LIBRARY_DIR}/Eigen/ CACHE PATH "Path to Eigen source folder")
 
 # Set C++ flags
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 # Find OpenCV
 
@@ -23,11 +23,12 @@ set(HEADERS
 	common_types.h
 	hash.h
 	rectify.h
-        disparity.h
+    disparity.h
 		)
 
 set(SOURCES
 	main.cpp
+	disparity.cpp
 )
 
 set(APP_LIBS

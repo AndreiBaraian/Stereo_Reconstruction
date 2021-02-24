@@ -18,7 +18,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/ximgproc/disparity_filter.hpp>
 
-
+#include <chrono>
 
 using namespace cv;
 using namespace stereo_vis;
@@ -41,12 +41,12 @@ const std::string dataset_path = "../data/Middlebury/Motorcycle-perfect";
 // Variables
 
 std::unordered_map<FrameCamId, cv::Mat> images;
-const std::string matcher_type("BM"); // BM or SGBM or ORB
+const std::string matcher_type("SGBM"); // BM or SGBM or ORB
 
 int main() 
 {
-	// run_evaluation();
-	// return 0;
+	//run_evaluation();
+	//return 0;
 	read_images();
 	// display_images();
 	FrameCamId fcidl(0, 0);
@@ -75,7 +75,10 @@ int main()
 	
 	AbstractStereoMatcher* matcher = AbstractStereoMatcher::Create(matcher_type);
 
+	// rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
+
 	Mat disp_map = matcher->computeDisparityMap(imgL, imgR);
+	displayDispMap(disp_map);
 	Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
 
 	Mat colors;
@@ -83,55 +86,6 @@ int main()
 	writeDepthMap(_3DImage, colors);
 	return 0;
 	
-	/*
-	else if (current_mode.compare("BM") == 0)
-	{
-		//Rectify images shoud work without any issue 
-		// rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
-		//visualization of rectified images
-		// visualizeRectified(rectL, rectR, width, height);
-		//Mat disp_map = computeDisparityMap(imgL, imgR);
-		Mat disp_map = computeDisparityMapBM(imgL, imgR);
-
-
-		Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
-		Mat colors;
-		cvtColor(img_color, colors, COLOR_BGR2RGB);
-//		std::cout<<"Colors : "<< colors.at<Vec3b>(0,0)  <<std::endl;
-		writeDepthMap(_3DImage, colors);
-		return 0;
-	}
-
-	else if (current_mode.compare("SGBM") == 0)
-	{
-		//Rectify images shoud work without any issue 
-		rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
-		//visualization of rectified images
-		// visualizeRectified(rectL, rectR, width, height);
-		//Mat disp_map = computeDisparityMap(imgL, imgR);
-		Mat disp_map = computeDisparityMapSGBM(imgL, imgR);
-		Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
-		Mat colors;
-        cvtColor(img_color, colors, COLOR_BGR2RGB);
-		writeDepthMap(_3DImage, colors);
-		return 0;
-	}
-	
-	else if (current_mode.compare("ORB") == 0)
-	{
-		//Rectify images shoud work without any issue 
-		rectifyImages(imgL, imgR, rectL, rectR, cameraMatrix0, cameraMatrix1, baseline, width, height);
-		//visualization of rectified images
-		//visualizeRectified(rectL, rectR, width, height);
-		//Mat disp_map = computeDisparityMap(imgL, imgR);
-		Mat disp_map = computeDisparityMapORB(rectL, rectR, 400, 0);
-		imwrite("test_dips.png", disp_map);
-		Mat _3DImage = computeDepthMap(disp_map, baseline, cameraMatrix0, doffs);
-		Mat colors;
-		cvtColor(img_color, colors, COLOR_BGR2RGB);
-		writeDepthMap(_3DImage, colors);
-		return 0;
-	}*/
 }
 
 void display_gt(double baseline, double doffs, Mat calib_cam)
@@ -140,7 +94,7 @@ void display_gt(double baseline, double doffs, Mat calib_cam)
 	ss << dataset_path << "/disp0.pfm";
 	Mat img_gt = imread(ss.str(), IMREAD_UNCHANGED);
 	img_gt.setTo(0, img_gt == INFINITY);
-	// displayDispMap(img_gt);
+	displayDispMap(img_gt);
 	img_gt.setTo(INFINITY, img_gt == 0);
 	// normalize(img_gt, img_gt, 0, 256, NORM_MINMAX, CV_8U);
 	Mat depth_map = computeDepthMap(img_gt, baseline, calib_cam, doffs);
@@ -256,7 +210,7 @@ void writeDepthMap(Mat depthMap, Mat colors)
 void run_evaluation()
 {
 	const std::string dataset_folder = "../data/Middlebury";
-	const std::string matcher_type = "BM";
+	const std::string matcher_type = "SGBM";
 	int frame_id = 0;
 
 	// Camera parameters
@@ -267,9 +221,14 @@ void run_evaluation()
 	int ndisp; int isint; int vmin; int vmax;
 	double dyavg; double dymax;
 
+	float ratios_total = 0;
+	float n_ratios = 0;
+
+	double avg_execution_time = 0;
+
 	for (const auto& entry : fs::directory_iterator(dataset_folder))
 	{
-		std::cout << entry.path() << std::endl;
+		std::cout << "Dataset: " << entry.path().filename() << std::endl;
 		FrameCamId fcidl(frame_id, 0);
 		FrameCamId fcidr(frame_id, 1);
 
@@ -286,6 +245,14 @@ void run_evaluation()
 		images[fcidl] = imgl;
 		images[fcidr] = imgr;
 
+		// read ground-truth disparity map
+		std::stringstream ss;
+		ss << entry.path().string() << "/disp0.pfm";
+		Mat img_gt = imread(ss.str(), IMREAD_UNCHANGED);
+		img_gt.setTo(0, img_gt == INFINITY);
+		// displayDispMap(img_gt);
+		normalize(img_gt, img_gt, 0, 256, NORM_MINMAX, CV_8U);
+
 		// read camera parameters
 		std::stringstream cameraParamDir;
 		cameraParamDir << entry.path().string() << "/calib.txt";
@@ -293,9 +260,57 @@ void run_evaluation()
 
 		AbstractStereoMatcher* matcher = AbstractStereoMatcher::Create(matcher_type);
 		
+		auto start = std::chrono::high_resolution_clock::now();
 		Mat disp_map = matcher->computeDisparityMap(imgl, imgr);
-		
+		auto stop = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+		std::cout << "Duration: " << duration.count() << std::endl;
+		avg_execution_time += duration.count();
+		Mat disp_map_normalized;
+		normalize(disp_map, disp_map_normalized, 0, 256, NORM_MINMAX, CV_8U);
+
+		int width_offset = (int)(disp_map.cols * 0.1); // offset of 10% to avoid the black band on the left
+
+		int outliers = 0;
+		int outliers_non_occluded = 0;
+		int totalPix_non_occluded = 0;
+		for(int i=0; i < disp_map.rows; i++)
+			for (int j = width_offset; j < disp_map.cols; j++)
+			{
+				int d_computed = disp_map_normalized.at<uchar>(i, j);
+				int d_gt = img_gt.at<uchar>(i, j);
+				int pix_err = abs(d_computed - d_gt);
+				if (pix_err > 30)
+				{
+					outliers++;
+				}
+				if (pix_err > 10 && d_computed != 0 && d_gt != 0)
+				{
+					outliers_non_occluded++;
+				}
+				if (d_computed == 0 || d_gt == 0)
+				{
+					totalPix_non_occluded++;
+				}
+			}
+
+		int totalPix = disp_map.rows * (disp_map.cols - width_offset);
+
+		float ratio = (float)outliers * 100 / totalPix;
+		float ratio_non_occluded = (float)outliers_non_occluded * 100 / (totalPix - totalPix_non_occluded);
+
+		std::cout << "Ratio: " << ratio << std::endl;
+		std::cout << "Ratio non-occluded: " << ratio_non_occluded << std::endl << std::endl;
+
+		if (ratio < 60)
+		{
+			ratios_total += ratio;
+			n_ratios++;
+		}
 
 		frame_id++;
 	}
+	std::cout << "Ratio: " << ratios_total / n_ratios << std::endl;
+	std::cout << "Number of ratios: " << n_ratios << std::endl;
+	std::cout << "Average execution time: " << avg_execution_time / frame_id << std::endl;
 }

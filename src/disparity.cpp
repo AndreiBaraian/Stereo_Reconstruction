@@ -88,7 +88,7 @@ Mat ORBMatcher::computeDisparityMap(Mat rect1_, Mat rect2_)
 
 	for (int i = max_disp + 1; i < rect1_.size().width; i++)
 	{
-		std::cout << "i =   " << i << ", out of " << rect1_.size().width << std::endl;
+		// std::cout << "i =   " << i << ", out of " << rect1_.size().width << std::endl;
 		for (int j = 0; j < rect1_.size().height; j++)
 		{
 
